@@ -1,0 +1,48 @@
+import { memoryStorage } from "multer";
+import { getDBStatus } from "../database/db"
+
+export const checkHealth = async (req, res) => {
+
+    try {
+       const dbstatus = getDBStatus();
+
+    const healthStatus = {
+        status: "OK",
+        timeStamp: new Date().toISOString(),
+        services: {
+            database: {
+                status: dbstatus.isConnected ? "healthy" : "unhealthy",
+                details: {
+                    ...dbstatus,
+                    readyState: getReadyStateText(dbstatus.readyState)
+                }
+            },
+            server: {
+                status: "healthy",
+                uptime: process.uptime(),
+                memoryUsage: process.memoryUsage(),
+            }
+        }
+    }
+    const httpStatus = healthStatus.services.database.status === "healthy" ? 200 : 503
+    res.status(hhtpStatus).json(healthStatus) 
+    } catch (error) {
+        console.error("Health check failed",error);
+        res.status(500).json({
+            status:"ERROR",
+            timeStamp:new Date().toISOString(),
+            error:error.message
+        })
+    }
+}
+
+function getReadyStateText(state) {
+    switch (state) {
+        case 0: return 'disconnected'
+        case 1: return 'connected'
+        case 2: return 'connecting'
+        case 3: return 'disconnected'
+
+        default: return 'unknown'
+    }
+}
